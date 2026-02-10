@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'main.dart'; // Import to access global 'cameras'
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -16,13 +17,8 @@ class LoginScreen extends StatelessWidget {
       body: Center(
         child: ElevatedButton(
           onPressed: () {
-            // Navigate to your existing MainScreen
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const MainScreen(),
-              ),
-            );
+            // Navigate to your existing AcessScreen
+            Navigator.pushReplacementNamed(context, '/access');
           },
           child: const Text('Continue'),
         ),
@@ -30,6 +26,7 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
+
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
 
@@ -41,8 +38,8 @@ class _MainScreenState extends State<MainScreen> {
   bool isPermissionGranted = false;
   late final Future<void> _future;
   CameraController? _controller;
-  List<CameraDescription>? _cameras;
   final FlutterTts _flutterTts = FlutterTts();
+  late final TextRecognizer _textRecognizer;
 
   // Variables for displaying and highlighting recognized text
   String _recognizedText = '';
@@ -53,6 +50,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    _textRecognizer = TextRecognizer();
     _future = _initializeCameraAndPermissions();
     _initializeTTS();
   }
@@ -63,15 +61,20 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       isPermissionGranted = status == PermissionStatus.granted;
     });
-    if (isPermissionGranted) {
-      _cameras = await availableCameras();
-      _controller = CameraController(_cameras![0], ResolutionPreset.medium);
+
+    if (isPermissionGranted && cameras.isNotEmpty) {
+      // Use the first camera from the global list
+      _controller = CameraController(
+        cameras[0],
+        ResolutionPreset.high, // Improved resolution for OCR
+        enableAudio: false,
+      );
       try {
         await _controller!.initialize();
+        await _flutterTts.speak("Camera Active. Tap screen to scan.");
       } catch (e) {
         if (mounted) {
-          setState(() {});
-          print('Camera initialization error: $e');
+          debugPrint('Camera initialization error: $e');
         }
       }
       if (mounted) setState(() {}); // Refresh UI after initialization
@@ -82,6 +85,46 @@ class _MainScreenState extends State<MainScreen> {
     await _flutterTts.setLanguage("en-US");
     await _flutterTts.setPitch(1.0);
     await _flutterTts.setSpeechRate(0.5);
+
+    _flutterTts.setStartHandler(() {
+      if (mounted) {
+        setState(() {
+          _isSpeaking = true;
+        });
+      }
+    });
+
+    _flutterTts.setProgressHandler((String text, int start, int end, String word) {
+      if (mounted) {
+        setState(() {
+          // Identify the word being spoken to highlight it
+          // Simple matching, might need more robust logic for duplicate words
+          // but sufficient for basic demo
+          int index = _words.indexOf(word, _currentWordIndex + 1);
+           if (index != -1) {
+            _currentWordIndex = index;
+          }
+        });
+      }
+    });
+
+    _flutterTts.setCompletionHandler(() {
+      if (mounted) {
+        setState(() {
+          _isSpeaking = false;
+          _currentWordIndex = -1;
+        });
+      }
+    });
+    
+    _flutterTts.setCancelHandler(() {
+        if (mounted) {
+            setState(() {
+                _isSpeaking = false;
+                _currentWordIndex = -1;
+            });
+        }
+    });
   }
 
   Future<String> _recognizeText() async {
@@ -91,46 +134,34 @@ class _MainScreenState extends State<MainScreen> {
     try {
       final image = await _controller!.takePicture();
       final inputImage = InputImage.fromFilePath(image.path);
-      final textRecognizer = TextRecognizer();
-      final RecognizedText recognizedText =
-      await textRecognizer.processImage(inputImage);
-      await textRecognizer.close();
+      // Use the persistent recognizer instance
+      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
       return recognizedText.text;
     } catch (e) {
-      print('OCR error: $e');
+      debugPrint('OCR error: $e');
       return 'Error processing image';
     }
   }
 
   Future<void> _speak(String text) async {
+    // If already speaking, stop it first
+    await _flutterTts.stop();
+    
     if (text.isEmpty) {
-      await _flutterTts.speak("No text recognized");
+      if (mounted) { // check mounted before using context or setstate if needed later
+         await _flutterTts.speak("No text recognized");
+      }
       return;
     }
 
-    _words = text.split(' ');
-    _currentWordIndex = -1;
-    _isSpeaking = true;
-    setState(() {});
-
-    _flutterTts.setStartHandler(() {
-      setState(() {
-        _isSpeaking = true;
-      });
-    });
-
-    _flutterTts.setProgressHandler((String text, int start, int end, String word) {
-      setState(() {
-        _currentWordIndex = _words.indexOf(word);
-      });
-    });
-
-    _flutterTts.setCompletionHandler(() {
-      setState(() {
-        _isSpeaking = false;
-        _currentWordIndex = -1;
-      });
-    });
+    // Reset state for new speech
+    if (mounted) {
+        setState(() {
+            _words = text.split(RegExp(r'\s+')); // Better splitting
+            _currentWordIndex = -1;
+            _isSpeaking = true;
+        });
+    }
 
     await _flutterTts.speak(text);
   }
@@ -148,55 +179,78 @@ class _MainScreenState extends State<MainScreen> {
             body: isPermissionGranted &&
                 _controller != null &&
                 _controller!.value.isInitialized
-                ? Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  height: 300,
-                  width: double.infinity, // makes it stretch horizontally
-                  child: CameraPreview(_controller!),
-                ),
-                const SizedBox(height: 20),
-
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        children: _words.asMap().entries.map((entry) {
-                          int idx = entry.key;
-                          String word = entry.value;
-                          bool isHighlighted = idx == _currentWordIndex;
-
-                          return TextSpan(
-                            text: '$word ',
-                            style: TextStyle(
-                              color: isHighlighted ? Colors.white : Colors.black,
-                              backgroundColor: isHighlighted ? Colors.deepPurple : Colors.transparent,
-                              fontSize: 18,
-                              height: 1.5,
+                ? GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () async {
+                       if (_isSpeaking) {
+                          await _flutterTts.stop();
+                          setState(() => _isSpeaking = false);
+                       } else {
+                          await _flutterTts.speak("Processing");
+                          final text = await _recognizeText();
+                          setState(() {
+                            _recognizedText = text;
+                            _words = text.split(RegExp(r'\s+'));
+                            _currentWordIndex = -1;
+                          });
+                          await _speak(text);
+                       }
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                       Expanded(
+                         flex: 4,
+                          child: Container(
+                            width: double.infinity,
+                            color: Colors.black,
+                            child: Center(
+                              child: CameraPreview(_controller!),
                             ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
 
-                ElevatedButton(
-                  onPressed: () async {
-                    final text = await _recognizeText();
-                    setState(() {
-                      _recognizedText = text;
-                      _words = text.split(' ');
-                      _currentWordIndex = -1;
-                    });
-                    await _speak(text);
-                  },
-                  child: Text(_isSpeaking ? 'Speaking...' : 'Scan & Read Aloud'),
-                ),
-              ],
-            )
+                        Expanded(
+                          flex: 3,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: SingleChildScrollView(
+                              child: RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  children: _words.asMap().entries.map((entry) {
+                                    int idx = entry.key;
+                                    String word = entry.value;
+                                    bool isHighlighted = idx == _currentWordIndex;
+
+                                    return TextSpan(
+                                      text: '$word ',
+                                      style: TextStyle(
+                                        color: isHighlighted ? Colors.white : Colors.black,
+                                        backgroundColor: isHighlighted ? Colors.deepPurple : Colors.transparent,
+                                        fontSize: 18,
+                                        height: 1.5,
+                                      ),
+                                    );
+                                  }).toList(),
+                                  style: const TextStyle(color: Colors.black, fontSize: 18),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 20.0),
+                          child: Text(
+                            _isSpeaking ? 'Tap to Stop' : 'Tap Screen to Scan',
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 : Center(
               child: Text(
                 isPermissionGranted
@@ -218,6 +272,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void dispose() {
     _controller?.dispose();
+    _textRecognizer.close(); // Properly close the recognizer
     _flutterTts.stop();
     super.dispose();
   }
