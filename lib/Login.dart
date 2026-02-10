@@ -3,29 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'services/accessibility_service.dart';
 import 'main.dart'; // Import to access global 'cameras'
 
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-      ),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            // Navigate to your existing AcessScreen
-            Navigator.pushReplacementNamed(context, '/access');
-          },
-          child: const Text('Continue'),
-        ),
-      ),
-    );
-  }
-}
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -82,9 +63,10 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _initializeTTS() async {
+    final profile = AccessibilityService().currentProfile;
     await _flutterTts.setLanguage("en-US");
-    await _flutterTts.setPitch(1.0);
-    await _flutterTts.setSpeechRate(0.5);
+    await _flutterTts.setPitch(profile.pitch);
+    await _flutterTts.setSpeechRate(profile.speechRate);
 
     _flutterTts.setStartHandler(() {
       if (mounted) {

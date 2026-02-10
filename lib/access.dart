@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'services/accessibility_service.dart';
 
 class AccessScreen extends StatefulWidget {
   const AccessScreen({super.key});
@@ -28,9 +29,11 @@ class _AccessScreenState extends State<AccessScreen> {
 
   // -------------------- TTS SETUP --------------------
   Future<void> _initTts() async {
+    final profile = AccessibilityService().currentProfile;
+    
     await _tts.setLanguage("en-US");
-    await _tts.setSpeechRate(0.45);
-    await _tts.setPitch(1.0);
+    await _tts.setSpeechRate(profile.speechRate);
+    await _tts.setPitch(profile.pitch);
     await _tts.awaitSpeakCompletion(true);
   }
 
