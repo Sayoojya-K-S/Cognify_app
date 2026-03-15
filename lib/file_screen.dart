@@ -4,6 +4,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'services/accessibility_service.dart';
+import 'common/voice_accessible_widget.dart';
 
 class FileScreen extends StatefulWidget {
   const FileScreen({super.key});
@@ -115,6 +117,7 @@ class _FileScreenState extends State<FileScreen> {
 
   @override
   void dispose() {
+    AccessibilityService().stopSpeaking();
     _tts.stop();
     _speech.stop();
     super.dispose();
@@ -131,6 +134,14 @@ class _FileScreenState extends State<FileScreen> {
         appBar: AppBar(
           title: const Text("FILE ACCESS"),
           backgroundColor: Colors.brown,
+          leading: VoiceAccessibleWidget(
+            label: "Back",
+            onTap: () {
+              AccessibilityService().stopSpeaking();
+              Navigator.pop(context);
+            },
+            child: const Icon(Icons.arrow_back),
+          ),
         ),
         body: Center(
           child: Padding(

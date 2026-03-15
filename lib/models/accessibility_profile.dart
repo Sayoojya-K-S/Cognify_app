@@ -2,9 +2,11 @@ class AccessibilityProfile {
   final bool voiceGuidanceEnabled;
   final double speechRate;
   final double pitch;
-  final bool highContrast; // Replaces visual impairment specific condition
+  final bool highContrast;
   final double textScale;
-  final bool simplifyUI; // Replaces cognitive load specific conditions (ADHD/Autism)
+  final bool simplifyUI;
+  final bool dyslexiaFont; // New
+  final bool focusMode; // New
 
   const AccessibilityProfile({
     this.voiceGuidanceEnabled = false,
@@ -13,14 +15,14 @@ class AccessibilityProfile {
     this.highContrast = false,
     this.textScale = 1.0,
     this.simplifyUI = false,
+    this.dyslexiaFont = false,
+    this.focusMode = false,
   });
 
-  /// standard defaults for a fresh install
   factory AccessibilityProfile.defaults() {
     return const AccessibilityProfile();
   }
 
-  /// Copy with logic for partial updates
   AccessibilityProfile copyWith({
     bool? voiceGuidanceEnabled,
     double? speechRate,
@@ -28,6 +30,8 @@ class AccessibilityProfile {
     bool? highContrast,
     double? textScale,
     bool? simplifyUI,
+    bool? dyslexiaFont,
+    bool? focusMode,
   }) {
     return AccessibilityProfile(
       voiceGuidanceEnabled: voiceGuidanceEnabled ?? this.voiceGuidanceEnabled,
@@ -36,11 +40,11 @@ class AccessibilityProfile {
       highContrast: highContrast ?? this.highContrast,
       textScale: textScale ?? this.textScale,
       simplifyUI: simplifyUI ?? this.simplifyUI,
+      dyslexiaFont: dyslexiaFont ?? this.dyslexiaFont,
+      focusMode: focusMode ?? this.focusMode,
     );
   }
 
-  /// Merges another profile into this one.
-  /// Non-null values in [other] override values in [this].
   AccessibilityProfile merge(AccessibilityProfile? other) {
     if (other == null) return this;
     return copyWith(
@@ -50,6 +54,8 @@ class AccessibilityProfile {
       highContrast: other.highContrast,
       textScale: other.textScale,
       simplifyUI: other.simplifyUI,
+      dyslexiaFont: other.dyslexiaFont,
+      focusMode: other.focusMode,
     );
   }
 
@@ -61,6 +67,8 @@ class AccessibilityProfile {
       'highContrast': highContrast,
       'textScale': textScale,
       'simplifyUI': simplifyUI,
+      'dyslexiaFont': dyslexiaFont,
+      'focusMode': focusMode,
     };
   }
 
@@ -72,6 +80,8 @@ class AccessibilityProfile {
       highContrast: json['highContrast'] ?? false,
       textScale: (json['textScale'] as num?)?.toDouble() ?? 1.0,
       simplifyUI: json['simplifyUI'] ?? false,
+      dyslexiaFont: json['dyslexiaFont'] ?? false,
+      focusMode: json['focusMode'] ?? false,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import '../models/accessibility_profile.dart';
 import 'backend_service.dart';
 
@@ -26,16 +27,45 @@ class AccessibilityService {
   // Backend storage cache
   AccessibilityProfile? _backendProfile;
 
+  final FlutterTts _tts = FlutterTts();
+
   Future<void> initialize() async {
     await _loadLocalProfile();
     await _syncBackendProfile();
     _updateMergedProfile();
+    
+    // Initialize TTS settings
+    await _tts.setLanguage("en-US");
+    await _updateTtsSettings();
 
     // Listen to platform-level accessibility changes
     WidgetsBinding.instance.platformDispatcher.onAccessibilityFeaturesChanged = () {
       _updateMergedProfile();
     };
   }
+
+  /// Speaks a message if Voice Guidance is enabled.
+  /// Interrupts current speech if [interrupt] is true.
+  Future<void> announce(String message, {bool interrupt = true}) async {
+    if (!currentProfile.voiceGuidanceEnabled) return;
+    
+    if (interrupt) {
+      await _tts.stop();
+    }
+    await _tts.speak(message);
+  }
+
+  Future<void> stopSpeaking() async {
+    await _tts.stop();
+  }
+
+  Future<void> _updateTtsSettings() async {
+    final profile = currentProfile;
+    await _tts.setSpeechRate(profile.speechRate);
+    await _tts.setPitch(profile.pitch);
+    // iOS/Android specific tweaks can go here
+  }
+
 
   /// Loads locally saved preferences
   Future<void> _loadLocalProfile() async {
@@ -63,6 +93,17 @@ class AccessibilityService {
       _backendService.saveUserProfile(newSettings);
     } catch (e) {
       debugPrint("Error saving local accessibility profile: $e");
+    }
+  }
+
+  Future<void> toggleVoiceGuidance() async {
+    final newStatus = !currentProfile.voiceGuidanceEnabled;
+    final newProfile = currentProfile.copyWith(voiceGuidanceEnabled: newStatus);
+    await updateLocalSettings(newProfile);
+    if (newStatus) {
+      await announce("Voice Guidance Enabled");
+    } else {
+      await announce("Voice Guidance Disabled");
     }
   }
 
@@ -129,6 +170,7 @@ class AccessibilityService {
     );
 
     profileNotifier.value = merged;
+    _updateTtsSettings(); // Ensure TTS engine reflects new profile (rate/pitch)
     debugPrint("Accessibility Profile Updated: ${jsonEncode(merged.toJson())}");
   }
 }

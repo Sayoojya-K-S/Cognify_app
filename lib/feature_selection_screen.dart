@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/accessibility_service.dart';
 import 'models/accessibility_profile.dart';
+import 'common/voice_accessible_widget.dart';
 
 class FeatureSelectionScreen extends StatefulWidget {
   const FeatureSelectionScreen({super.key});
@@ -30,6 +31,14 @@ class _FeatureSelectionScreenState extends State<FeatureSelectionScreen> {
             backgroundColor: isHighContrast ? Colors.black : Colors.deepPurple,
             iconTheme: IconThemeData(color: textColor),
             elevation: 0,
+            leading: VoiceAccessibleWidget(
+              label: "Back",
+              onTap: () {
+                   // No dedicated TTS on this screen to stop, but good practice
+                   Navigator.pop(context);
+              },
+              child: Icon(Icons.arrow_back, color: textColor),
+            ),
           ),
           body: ListView(
             padding: const EdgeInsets.all(16.0),
@@ -86,7 +95,23 @@ class _FeatureSelectionScreenState extends State<FeatureSelectionScreen> {
               ),
 
               const SizedBox(height: 20),
-              _buildSectionHeader("Cognitive", textColor),
+              _buildSectionHeader("Reading & Cognition", textColor),
+              _buildSwitchTile(
+                "Dyslexia Font",
+                "Use OpenDyslexic-like font",
+                profile.dyslexiaFont,
+                (val) => _updateProfile(profile.copyWith(dyslexiaFont: val)),
+                cardColor,
+                textColor,
+              ),
+              _buildSwitchTile(
+                "Focus Mode",
+                "Hide non-essential elements",
+                profile.focusMode,
+                (val) => _updateProfile(profile.copyWith(focusMode: val)),
+                cardColor,
+                textColor,
+              ),
               _buildSwitchTile(
                 "Simplify UI",
                 "Reduce distractions and simplifiy layout",
@@ -133,12 +158,35 @@ class _FeatureSelectionScreenState extends State<FeatureSelectionScreen> {
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: SwitchListTile(
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
-        subtitle: Text(subtitle, style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 13)),
-        value: value,
-        onChanged: onChanged,
-        activeColor: Colors.deepPurpleAccent,
+      child: VoiceAccessibleWidget(
+        label: "$title, ${value ? "On" : "Off"}. $subtitle",
+        isButton: true,
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 13)),
+                  ],
+                ),
+              ),
+              IgnorePointer(
+                child: Switch(
+                  value: value,
+                  onChanged: (val) {}, // Ignored, but keeps active color
+                  activeColor: Colors.deepPurpleAccent,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -158,27 +206,57 @@ class _FeatureSelectionScreenState extends State<FeatureSelectionScreen> {
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
-                Text(valueLabel, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
-              ],
-            ),
-            Slider(
-              value: value,
-              min: min,
-              max: max,
-              divisions: 15,
-              onChanged: onChanged,
-              activeColor: Colors.deepPurpleAccent,
-            ),
-          ],
+      child: VoiceAccessibleWidget(
+        label: "$title, currently $valueLabel. Double tap to increase.",
+        onTap: () {
+          // Cycle value on normal tap? No, normal users expect slider.
+          // But strict VoiceAccessibleWidget logic calls this onTap for Double Tap in VoiceMode.
+          // For Normal Mode, we want the slider to be usable.
+          
+          // Hybrid approach:
+          // In Voice Mode: Double Tap -> Increment
+          // In Normal Mode: Tap -> nothing (let slider handle?), or Increment?
+          // Since we wrap in VoiceAccessibleWidget, we control the top gesture.
+          // If we want slider to work in normal mode, we can't wrap it directly in a GestureDetector that consumes everything.
+          
+          // Hack: Increase value by 10% step
+          double newValue = value + ((max - min) / 5);
+          if (newValue > max) newValue = min;
+          onChanged(newValue);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: TextStyle(fontWeight: FontWeight.w600, color: textColor)),
+                  Text(valueLabel, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurpleAccent)),
+                ],
+              ),
+              // In Normal Mode, we want the slider to work.
+              // VoiceAccessibleWidget wraps it.
+              // If we use IgnorePointer on Slider, normal users can't drag.
+              // If we don't, Voice users might get stuck in slider.
+              // Solution: Check if Voice Mode is enabled globally?
+              // VoiceAccessibleWidget receives 'onTap' which is only called for Single Tap (Normal) or Double Tap (Voice).
+              // It doesn't block vertical/horizontal drags unless we tell it to.
+              
+              // Let's rely on the Slider for normal interaction, but wrap it for Voice Mode announcement area.
+              // However, VoiceAccessibleWidget uses HitTestBehavior.opaque which might steal touches.
+              // A simple cycle on double tap is a safe fallback for Voice Mode.
+              Slider(
+                value: value,
+                min: min,
+                max: max,
+                divisions: 15,
+                onChanged: onChanged,
+                activeColor: Colors.deepPurpleAccent,
+              ),
+            ],
+          ),
         ),
       ),
     );
