@@ -4,6 +4,7 @@ import 'services/accessibility_service.dart';
 import 'services/ai_service.dart';
 import 'learning/ai_result_screen.dart';
 import 'learning/quiz_screen.dart';
+import 'learning/history_screen.dart';
 
 class TextDisplayScreen extends StatefulWidget {
   final String text;
@@ -89,6 +90,12 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
   }
 
   Future<void> _simplifyText() async {
+    if (widget.text.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter at least 10 characters"))
+      );
+      return;
+    }
     setState(() => _isProcessing = true);
     final result = await _aiService.simplifyText(widget.text);
     if (mounted) setState(() => _isProcessing = false);
@@ -101,6 +108,12 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
   }
 
   Future<void> _generateQuiz() async {
+    if (widget.text.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter at least 10 characters"))
+      );
+      return;
+    }
     setState(() => _isProcessing = true);
     final result = await _aiService.generateQuiz(widget.text);
     if (mounted) setState(() => _isProcessing = false);
@@ -135,6 +148,15 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
             Navigator.pop(context);
           },
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'View History',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (ctx) => const HistoryScreen()));
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

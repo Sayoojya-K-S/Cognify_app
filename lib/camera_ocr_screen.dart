@@ -20,6 +20,7 @@ class _MainScreenState extends State<MainScreen> {
   late final Future<void> _future;
   CameraController? _controller;
   late final TextRecognizer _textRecognizer;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -80,20 +81,27 @@ class _MainScreenState extends State<MainScreen> {
               final bool isVoiceMode = profile.voiceGuidanceEnabled;
               
               Future<void> triggerCapture() async {
-                  // Feedback for capture
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Processing..."), duration: Duration(milliseconds: 500)),
-                  );
-                  
-                  final text = await _recognizeText();
-                  
-                  if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => TextDisplayScreen(text: text),
-                      ),
+                  if (_isProcessing) return;
+                  _isProcessing = true;
+
+                  try {
+                    // Feedback for capture
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Processing..."), duration: Duration(milliseconds: 500)),
                     );
+                    
+                    final text = await _recognizeText();
+                    
+                    if (mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => TextDisplayScreen(text: text),
+                        ),
+                      );
+                    }
+                  } finally {
+                    _isProcessing = false;
                   }
               }
 

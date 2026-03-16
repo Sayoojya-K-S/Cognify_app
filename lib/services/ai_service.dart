@@ -4,12 +4,11 @@ import 'package:http/http.dart' as http;
 import '../models/ai_models.dart';
 
 class AIService {
-  // Use 10.0.2.2 for Android emulator to access localhost, otherwise localhost
   static String get _baseUrl {
     if (kIsWeb) {
       return 'http://localhost:8000/api';
     } else if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000/api';
+      return 'http://192.168.1.44:8000/api';
     } else {
       return 'http://localhost:8000/api';
     }
@@ -52,6 +51,24 @@ class AIService {
     } catch (e) {
       print('Exception in generateQuiz: $e');
       return null;
+    }
+  }
+
+  Future<List<dynamic>> getHistory() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/history'),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as List<dynamic>;
+      } else {
+        print('Error fetching history: ${response.statusCode} - ${response.body}');
+        return [];
+      }
+    } catch (e) {
+      print('Exception in getHistory: $e');
+      return [];
     }
   }
 }
