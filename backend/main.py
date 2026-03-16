@@ -41,8 +41,8 @@ app.add_middleware(
 
 # Configure Groq Cloud
 groq_api_key = os.getenv("XAI_API_KEY")
-if groq_api_key == default_api_key:
-    logger.warning("Using default API key placeholder. Please set GROQ_API_KEY environment variable.")
+#if groq_api_key == default_api_key:
+#   logger.warning("Using default API key placeholder. Please set GROQ_API_KEY environment variable.")
 
 # ----------------- Models -----------------
 
