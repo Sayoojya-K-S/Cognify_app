@@ -59,12 +59,6 @@ class _ConditionSelectionScreenState extends State<ConditionSelectionScreen> {
         route: '/feature_selection',
       ),
       DashboardItem(
-        title: "Learning",
-        icon: Icons.school,
-        color: Colors.teal,
-        route: '/learning',
-      ),
-      DashboardItem(
         title: "Camera",
         icon: Icons.camera_alt,
         color: Colors.blue,

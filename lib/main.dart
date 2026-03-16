@@ -6,10 +6,7 @@ import 'file_screen.dart';
 import 'condition_selection_screen.dart'; 
 import 'feature_selection_screen.dart';
 import 'services/accessibility_service.dart';
-import 'globals.dart'; 
-import 'learning_screen.dart';
-import 'learning/quiz_screen.dart';
-import 'learning/flashcard_screen.dart';
+import 'globals.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,9 +39,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/condition_selection': (_) => const ConditionSelectionScreen(),
         '/feature_selection': (_) => const FeatureSelectionScreen(),
-        '/learning': (_) => const LearningScreen(),
-        '/learning/quiz': (_) => const QuizScreen(),
-        '/learning/flashcards': (_) => const FlashcardScreen(),
         '/camera': (_) => const MainScreen(),
         '/audio': (_) => const AudioScreen(),
         '/file': (_) => const FileScreen(),

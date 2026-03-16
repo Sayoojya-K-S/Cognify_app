@@ -5,13 +5,7 @@ import '../models/ai_models.dart';
 
 class AIService {
   static String get _baseUrl {
-    if (kIsWeb) {
-      return 'http://localhost:8000/api';
-    } else if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://192.168.1.44:8000/api';
-    } else {
-      return 'http://localhost:8000/api';
-    }
+    return 'https://cognify-backend.onrender.com/api';
   }
 
   Future<SimplifyResponse?> simplifyText(String text) async {

@@ -6,6 +6,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'services/accessibility_service.dart';
 import 'common/voice_accessible_widget.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'text_display_screen.dart';
+import 'models/accessibility_profile.dart';
 
 class FileScreen extends StatefulWidget {
   const FileScreen({super.key});
@@ -28,8 +32,10 @@ class _FileScreenState extends State<FileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initTts();
-      _initSpeech();
+      if (AccessibilityService().profileNotifier.value.voiceGuidanceEnabled) {
+        _initTts();
+        _initSpeech();
+      }
     });
   }
 
@@ -115,6 +121,48 @@ class _FileScreenState extends State<FileScreen> {
     }
   }
 
+  Future<void> _pickAndReadPdf() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'txt'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        String ext = result.files.single.extension?.toLowerCase() ?? '';
+        File file = File(result.files.single.path!);
+        String text = '';
+
+        if (ext == 'pdf') {
+          final PdfDocument document = PdfDocument(inputBytes: await file.readAsBytes());
+          text = PdfTextExtractor(document).extractText();
+          document.dispose();
+        } else if (ext == 'txt') {
+          text = await file.readAsString();
+        }
+        
+        if (text.trim().isEmpty) {
+          text = 'No text found in file.';
+        }
+
+        if (mounted) {
+           Navigator.push(
+               context,
+               MaterialPageRoute(
+                 builder: (context) => TextDisplayScreen(text: text),
+               ),
+           );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error reading file: $e')),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     AccessibilityService().stopSpeaking();
@@ -125,61 +173,108 @@ class _FileScreenState extends State<FileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _handleTap,
-      onDoubleTap: _handleDoubleTap,
-      child: Scaffold(
-        backgroundColor: Colors.brown.shade900, // Distinct color for File Screen
-        appBar: AppBar(
-          title: const Text("FILE ACCESS"),
-          backgroundColor: Colors.brown,
-          leading: VoiceAccessibleWidget(
-            label: "Back",
-            onTap: () {
-              AccessibilityService().stopSpeaking();
-              Navigator.pop(context);
-            },
-            child: const Icon(Icons.arrow_back),
-          ),
-        ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                 const Text(
-                   "FILE ACCESS",
-                   style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
-                 ),
-                 const SizedBox(height: 30),
-                 Icon(
-                   _currentState == FileState.listening ? Icons.mic : Icons.folder,
-                   color: Colors.white,
-                   size: 80,
-                 ),
-                 const SizedBox(height: 20),
-                 Text(
-                   _statusText,
-                   textAlign: TextAlign.center,
-                   style: const TextStyle(color: Colors.white, fontSize: 24),
-                 ),
-                 const SizedBox(height: 20),
-                 if (_currentState == FileState.reading)
-                   Expanded(
-                     child: SingleChildScrollView(
-                       child: Text(
-                         _content,
-                         style: const TextStyle(color: Colors.white70, fontSize: 18),
-                       ),
+    return ValueListenableBuilder<AccessibilityProfile>(
+      valueListenable: AccessibilityService().profileNotifier,
+      builder: (context, profile, child) {
+        final bool isVoiceMode = profile.voiceGuidanceEnabled;
+
+        if (!isVoiceMode) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text("FILE UPLOAD"),
+              backgroundColor: Colors.brown,
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.upload_file, size: 80, color: Colors.brown),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Upload Document",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Select a PDF or TXT file to extract text.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 16, color: Colors.black54),
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.brown,
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                      ),
+                      onPressed: _pickAndReadPdf,
+                      child: const Text("Select File", style: TextStyle(fontSize: 18, color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _handleTap,
+          onDoubleTap: _handleDoubleTap,
+          child: Scaffold(
+            backgroundColor: Colors.brown.shade900, // Distinct color for File Screen
+            appBar: AppBar(
+              title: const Text("FILE ACCESS"),
+              backgroundColor: Colors.brown,
+              leading: VoiceAccessibleWidget(
+                label: "Back",
+                onTap: () {
+                  AccessibilityService().stopSpeaking();
+                  Navigator.pop(context);
+                },
+                child: const Icon(Icons.arrow_back),
+              ),
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                     const Text(
+                       "FILE ACCESS",
+                       style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
                      ),
-                   ),
-              ],
+                     const SizedBox(height: 30),
+                     Icon(
+                       _currentState == FileState.listening ? Icons.mic : Icons.folder,
+                       color: Colors.white,
+                       size: 80,
+                     ),
+                     const SizedBox(height: 20),
+                     Text(
+                       _statusText,
+                       textAlign: TextAlign.center,
+                       style: const TextStyle(color: Colors.white, fontSize: 24),
+                     ),
+                     const SizedBox(height: 20),
+                     if (_currentState == FileState.reading)
+                       Expanded(
+                         child: SingleChildScrollView(
+                           child: Text(
+                             _content,
+                             style: const TextStyle(color: Colors.white70, fontSize: 18),
+                           ),
+                         ),
+                       ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
