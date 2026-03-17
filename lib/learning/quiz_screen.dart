@@ -124,7 +124,6 @@ class _QuizScreenState extends State<QuizScreen> {
         final Color backgroundColor = isHighContrast ? Colors.black : Colors.white;
         final Color textColor = isHighContrast ? Colors.white : Colors.black87;
         final Color optionColor = isHighContrast ? Colors.grey[900]! : Colors.blue.shade50;
-        final Color correctColor = isHighContrast ? Colors.green : Colors.green.shade200; // Not used in this simple version yet
 
         final questionData = _questions[_currentQuestionIndex];
         final TextStyle fontStyle = TextStyle(

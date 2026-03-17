@@ -89,6 +89,7 @@ def health_check():
 
 @app.post("/api/simplify", response_model=SimplifyResponse)
 async def simplify_text(req: ProcessRequest, db: Session = Depends(get_db)):
+    logger.info(f"Received simplify request: {req.text[:50]}...")  # logs first 50 chars
     client = get_client(req.api_key)
     prompt = (
         "Process the following raw text by rewriting it simply, extracting 3-5 bullet points, "

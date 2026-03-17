@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../models/accessibility_profile.dart';
 import 'backend_service.dart';
+import 'package:flutter_dnd/flutter_dnd.dart';
 
 class AccessibilityService {
   static final AccessibilityService _instance = AccessibilityService._internal();
@@ -135,6 +136,7 @@ class AccessibilityService {
 
   /// The Core Logic: Merges Default < Backend < Local < OS
   void _updateMergedProfile() {
+    final oldProfile = profileNotifier.value;
     AccessibilityProfile merged = AccessibilityProfile.defaults();
 
     // 1. Apply Backend (if exists)
@@ -172,5 +174,24 @@ class AccessibilityService {
     profileNotifier.value = merged;
     _updateTtsSettings(); // Ensure TTS engine reflects new profile (rate/pitch)
     debugPrint("Accessibility Profile Updated: ${jsonEncode(merged.toJson())}");
+    
+    if (oldProfile.focusMode != merged.focusMode) {
+      _applyFocusMode(merged.focusMode);
+    }
+  }
+
+  Future<void> _applyFocusMode(bool enabled) async {
+    bool? isGranted = await FlutterDnd.isNotificationPolicyAccessGranted;
+    if (enabled) {
+      if (isGranted != null && isGranted) {
+        await FlutterDnd.setInterruptionFilter(FlutterDnd.INTERRUPTION_FILTER_NONE);
+      } else {
+        FlutterDnd.gotoPolicySettings();
+      }
+    } else {
+      if (isGranted != null && isGranted) {
+        await FlutterDnd.setInterruptionFilter(FlutterDnd.INTERRUPTION_FILTER_ALL);
+      }
+    }
   }
 }

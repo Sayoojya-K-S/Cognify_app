@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/ai_models.dart';
 
 class AIService {
   static String get _baseUrl {
-    return 'https://cognify-backend.onrender.com/api';
+    // If you deployed to a new Render instance or unsuspended it, set it here.
+    return 'https://cognify-backend.onrender.com/api'; 
   }
 
   Future<SimplifyResponse?> simplifyText(String text) async {
@@ -20,11 +20,20 @@ class AIService {
         return SimplifyResponse.fromJson(jsonDecode(response.body));
       } else {
         print('Error simplifying text: ${response.statusCode} - ${response.body}');
-        return null;
+        String errorMsg = 'Error ${response.statusCode}';
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded['detail'] != null) {
+            errorMsg = decoded['detail'].toString();
+          } else if (decoded['error'] != null) {
+            errorMsg = decoded['error'].toString();
+          }
+        } catch (_) {}
+        throw Exception(errorMsg);
       }
     } catch (e) {
       print('Exception in simplifyText: $e');
-      return null;
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
     }
   }
 

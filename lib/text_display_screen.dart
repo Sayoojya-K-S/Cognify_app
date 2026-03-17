@@ -5,6 +5,7 @@ import 'services/ai_service.dart';
 import 'learning/ai_result_screen.dart';
 import 'learning/quiz_screen.dart';
 import 'learning/history_screen.dart';
+import 'models/accessibility_profile.dart';
 
 class TextDisplayScreen extends StatefulWidget {
   final String text;
@@ -130,13 +131,21 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
       return;
     }
     setState(() => _isProcessing = true);
-    final result = await _aiService.simplifyText(widget.text);
-    if (mounted) setState(() => _isProcessing = false);
     
-    if (result != null && mounted) {
-      Navigator.push(context, MaterialPageRoute(builder: (ctx) => AIResultScreen(result: result)));
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Failed to simplify text.")));
+    try {
+      final result = await _aiService.simplifyText(widget.text);
+      if (mounted) setState(() => _isProcessing = false);
+      
+      if (result != null && mounted) {
+        Navigator.push(context, MaterialPageRoute(builder: (ctx) => AIResultScreen(result: result)));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', '')))
+        );
+      }
     }
   }
 
@@ -214,27 +223,33 @@ class _TextDisplayScreenState extends State<TextDisplayScreen> {
                     padding: const EdgeInsets.all(24.0),
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      child: RichText(
-                        textAlign: TextAlign.start,
-                        text: TextSpan(
-                          children: _words.asMap().entries.map((entry) {
-                            int idx = entry.key;
-                            String word = entry.value;
-                            bool isHighlighted = idx == _currentWordIndex;
+                      child: ValueListenableBuilder<AccessibilityProfile>(
+                        valueListenable: AccessibilityService().profileNotifier,
+                        builder: (context, profile, child) {
+                          return RichText(
+                            textAlign: TextAlign.start,
+                            text: TextSpan(
+                              children: _words.asMap().entries.map((entry) {
+                                int idx = entry.key;
+                                String word = entry.value;
+                                bool isHighlighted = idx == _currentWordIndex;
 
-                            return TextSpan(
-                              text: '$word ',
-                              style: TextStyle(
-                                color: isHighlighted ? Colors.white : Colors.black87,
-                                backgroundColor: isHighlighted ? Colors.blue.shade700 : Colors.transparent,
-                                fontSize: 22,
-                                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
-                                height: 1.6,
-                                letterSpacing: 0.3,
-                              ),
-                            );
-                          }).toList(),
-                        ),
+                                return TextSpan(
+                                  text: '$word ',
+                                  style: TextStyle(
+                                    fontFamily: profile.dyslexiaFont ? 'OpenDyslexic' : null,
+                                    color: isHighlighted ? Colors.white : Colors.black87,
+                                    backgroundColor: isHighlighted ? Colors.blue.shade700 : Colors.transparent,
+                                    fontSize: 22,
+                                    fontWeight: isHighlighted ? FontWeight.bold : FontWeight.w500,
+                                    height: 1.6,
+                                    letterSpacing: 0.3,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),

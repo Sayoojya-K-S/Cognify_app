@@ -7,6 +7,7 @@ import 'condition_selection_screen.dart';
 import 'feature_selection_screen.dart';
 import 'services/accessibility_service.dart';
 import 'globals.dart';
+import 'models/accessibility_profile.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,19 +30,25 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Cognify: Text Recognition',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      initialRoute: '/condition_selection',
-      routes: {
-        '/condition_selection': (_) => const ConditionSelectionScreen(),
-        '/feature_selection': (_) => const FeatureSelectionScreen(),
-        '/camera': (_) => const MainScreen(),
-        '/audio': (_) => const AudioScreen(),
-        '/file': (_) => const FileScreen(),
+    return ValueListenableBuilder<AccessibilityProfile>(
+      valueListenable: AccessibilityService().profileNotifier,
+      builder: (context, profile, child) {
+        return MaterialApp(
+          title: 'Cognify: Text Recognition',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+            fontFamily: profile.dyslexiaFont ? 'OpenDyslexic' : null,
+          ),
+          initialRoute: '/condition_selection',
+          routes: {
+            '/condition_selection': (_) => const ConditionSelectionScreen(),
+            '/feature_selection': (_) => const FeatureSelectionScreen(),
+            '/camera': (_) => const MainScreen(),
+            '/audio': (_) => const AudioScreen(),
+            '/file': (_) => const FileScreen(),
+          },
+        );
       },
     );
   }
