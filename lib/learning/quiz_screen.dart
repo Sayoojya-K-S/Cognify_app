@@ -129,7 +129,7 @@ class _QuizScreenState extends State<QuizScreen> {
         final TextStyle fontStyle = TextStyle(
           fontFamily: profile.dyslexiaFont ? 'OpenDyslexic' : null,
           color: textColor,
-          fontSize: 20 * profile.textScale,
+          fontSize: 20,
         );
 
         return Scaffold(
@@ -159,7 +159,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   onTap: () => _service.announce(questionData['question']),
                   child: Text(
                     questionData['question'],
-                    style: fontStyle.copyWith(fontWeight: FontWeight.bold, fontSize: 24 * profile.textScale),
+                    style: fontStyle.copyWith(fontWeight: FontWeight.bold, fontSize: 24),
                   ),
                 ),
                 const SizedBox(height: 40),

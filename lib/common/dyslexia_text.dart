@@ -23,7 +23,7 @@ class DyslexiaFriendlyText extends StatelessWidget {
     return ValueListenableBuilder<AccessibilityProfile>(
       valueListenable: AccessibilityService().profileNotifier,
       builder: (context, profile, child) {
-        final double scale = profile.textScale;
+
         final bool isDyslexia = profile.dyslexiaFont;
         final bool isHighContrast = profile.highContrast;
 
@@ -31,7 +31,7 @@ class DyslexiaFriendlyText extends StatelessWidget {
         final TextStyle baseStyle = style ?? DefaultTextStyle.of(context).style;
 
         // Apply accessibility overrides
-        final double effectiveFontSize = (baseStyle.fontSize ?? 14.0) * scale;
+        final double effectiveFontSize = (baseStyle.fontSize ?? 14.0);
         
         // Dyslexia tweaks: 
         // - Heavy bottom weighted font (simulated here with spacing/weight if custom font not available)

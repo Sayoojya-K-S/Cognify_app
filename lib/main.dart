@@ -8,6 +8,7 @@ import 'feature_selection_screen.dart';
 import 'services/accessibility_service.dart';
 import 'globals.dart';
 import 'models/accessibility_profile.dart';
+import 'help_center_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,14 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
             fontFamily: profile.dyslexiaFont ? 'OpenDyslexic' : null,
           ),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(profile.textScale),
+              ),
+              child: child!,
+            );
+          },
           initialRoute: '/condition_selection',
           routes: {
             '/condition_selection': (_) => const ConditionSelectionScreen(),
@@ -47,6 +56,7 @@ class MyApp extends StatelessWidget {
             '/camera': (_) => const MainScreen(),
             '/audio': (_) => const AudioScreen(),
             '/file': (_) => const FileScreen(),
+            '/help_center': (_) => const HelpCenterScreen(),
           },
         );
       },

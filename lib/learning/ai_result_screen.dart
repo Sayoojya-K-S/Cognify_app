@@ -23,12 +23,12 @@ class AIResultScreen extends StatelessWidget {
         final TextStyle fontStyle = TextStyle(
           fontFamily: profile.dyslexiaFont ? 'OpenDyslexic' : null,
           color: textColor,
-          fontSize: 18 * profile.textScale,
+          fontSize: 18,
         );
 
         final TextStyle titleStyle = fontStyle.copyWith(
           fontWeight: FontWeight.bold,
-          fontSize: 24 * profile.textScale,
+          fontSize: 24,
         );
 
         return Scaffold(
@@ -61,7 +61,7 @@ class AIResultScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Summary", style: titleStyle.copyWith(fontSize: 20 * profile.textScale)),
+                        Text("Summary", style: titleStyle.copyWith(fontSize: 20)),
                         const SizedBox(height: 8),
                         Text(result.summary, style: fontStyle),
                       ],

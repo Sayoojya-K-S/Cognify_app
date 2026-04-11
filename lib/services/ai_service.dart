@@ -4,8 +4,8 @@ import '../models/ai_models.dart';
 
 class AIService {
   static String get _baseUrl {
-    // If you deployed to a new Render instance or unsuspended it, set it here.
-    return 'https://cognify-backend.onrender.com/api'; 
+    // Local IP address so it points to the locally running python backend (start_backend.bat)
+    return 'http://192.168.20.3:8000/api'; 
   }
 
   Future<SimplifyResponse?> simplifyText(String text) async {

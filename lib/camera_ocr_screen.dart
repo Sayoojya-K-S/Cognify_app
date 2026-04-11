@@ -7,6 +7,9 @@ import 'text_display_screen.dart'; // Import for TextDisplayScreen
 import 'services/accessibility_service.dart';
 import 'models/accessibility_profile.dart';
 import 'common/voice_accessible_widget.dart';
+import 'package:image/image.dart' as img;
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -59,10 +62,57 @@ class _MainScreenState extends State<MainScreen> {
       return 'Camera not ready';
     }
     try {
-      final image = await _controller!.takePicture();
-      final inputImage = InputImage.fromFilePath(image.path);
-      final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
-      return recognizedText.text;
+      final cameraImage = await _controller!.takePicture();
+      
+      // Load the image from file
+      final bytes = await cameraImage.readAsBytes();
+      img.Image? originalImage = img.decodeImage(bytes);
+      
+      if (originalImage != null) {
+        // Preprocess: Convert to grayscale
+        img.Image grayscale = img.grayscale(originalImage);
+        
+        // Preprocess: Increase contrast to make text stand out
+        img.Image highContrast = img.adjustColor(grayscale, contrast: 1.5);
+        
+        // Preprocess: Resize image to an optimal width for OCR processing
+        img.Image resized = img.copyResize(highContrast, width: 1024);
+        
+        // Preprocess: Auto-Crop the center 80% of the image (removes thumbs, table edges, etc)
+        int cropX = (resized.width * 0.1).toInt();
+        int cropY = (resized.height * 0.1).toInt();
+        int cropW = (resized.width * 0.8).toInt();
+        int cropH = (resized.height * 0.8).toInt();
+        img.Image preprocessedImage = img.copyCrop(resized, x: cropX, y: cropY, width: cropW, height: cropH);
+        
+        // Save back to a temporary file
+        final tempDir = await getTemporaryDirectory();
+        final tempFilePath = '${tempDir.path}/processed_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final file = File(tempFilePath);
+        await file.writeAsBytes(img.encodeJpg(preprocessedImage));
+        
+        final inputImage = InputImage.fromFilePath(tempFilePath);
+        final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
+        
+        // Optionally delete temp file
+        if (await file.exists()) {
+           await file.delete();
+        }
+
+        String rawText = recognizedText.text;
+        rawText = rawText.replaceAll(RegExp("[^a-zA-Z0-9\\s.,!?'\"()-]"), '');
+        rawText = rawText.replaceAll(RegExp(r'\s+'), ' ');
+        return rawText.trim();
+      } else {
+        // Fallback if decode fails
+        final inputImage = InputImage.fromFilePath(cameraImage.path);
+        final RecognizedText recognizedText = await _textRecognizer.processImage(inputImage);
+        
+        String rawText = recognizedText.text;
+        rawText = rawText.replaceAll(RegExp("[^a-zA-Z0-9\\s.,!?'\"()-]"), '');
+        rawText = rawText.replaceAll(RegExp(r'\s+'), ' ');
+        return rawText.trim();
+      }
     } catch (e) {
       debugPrint('OCR error: $e');
       return 'Error processing image';

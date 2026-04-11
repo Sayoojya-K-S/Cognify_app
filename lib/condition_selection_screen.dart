@@ -74,7 +74,7 @@ class _ConditionSelectionScreenState extends State<ConditionSelectionScreen> {
         title: "Help Center",
         icon: Icons.help,
         color: Colors.green,
-        customAction: () => _showPlaceholder("Help Center"),
+        route: '/help_center',
       ),
       DashboardItem(
         title: "File",
@@ -278,11 +278,6 @@ class _ConditionSelectionScreenState extends State<ConditionSelectionScreen> {
     );
   }
 
-  void _showPlaceholder(String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("$title - Coming Soon")),
-    );
-  }
 
   Widget _buildDashboardCard(
     BuildContext context,
